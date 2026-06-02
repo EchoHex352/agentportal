@@ -1,0 +1,26 @@
+{
+  "name": "agent-oversight-portal",
+  "version": "0.1.0",
+  "description": "Real-time oversight portal for collaborating AI agents with Telegram alert routing",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "agents",
+    "oversight",
+    "portal",
+    "telegram",
+    "sse"
+  ],
+  "author": "Neuralogic",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.0",
+    "dotenv": "^16.0.3"
+  }
+}

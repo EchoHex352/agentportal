@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Oversight Portal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+      color: #58a6ff;
+    }
+
+    .status {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9em;
+      color: #8b949e;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+    }
+
+    .status-dot.disconnected {
+      background: #f85149;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    select, input {
+      padding: 8px 12px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+    }
+
+    .event-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 600px;
+      overflow-y: auto;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 15px;
+      background: #0d1117;
+    }
+
+    .event {
+      padding: 12px;
+      border-left: 3px solid;
+      border-radius: 4px;
+      background: #161b22;
+      font-size: 0.9em;
+    }
+
+    .event.critical {
+      border-left-color: #f85149;
+      background: rgba(248, 81, 73, 0.1);
+    }
+
+    .event.warning {
+      border-left-color: #d29922;
+      background: rgba(210, 153, 34, 0.1);
+    }
+
+    .event.info {
+      border-left-color: #58a6ff;
+      background: rgba(88, 166, 255, 0.1);
+    }
+
+    .event.debug {
+      border-left-color: #79c0ff;
+      background: rgba(121, 192, 255, 0.1);
+    }
+
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .event-agent {
+      font-weight: 600;
+      color: #58a6ff;
+      font-size: 0.85em;
+    }
+
+    .event-severity {
+      font-size: 0.75em;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #30363d;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .event-severity.critical {
+      background: #da3633;
+      color: #fff;
+    }
+
+    .event-severity.warning {
+      background: #9e6a03;
+      color: #fff;
+    }
+
+    .event-title {
+      font-weight: 500;
+      color: #c9d1d9;
+      margin-bottom: 4px;
+    }
+
+    .event-detail {
+      font-size: 0.85em;
+      color: #8b949e;
+      margin-bottom: 4px;
+    }
+
+    .event-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75em;
+      color: #6e7681;
+    }
+
+    .event-time {
+      font-family: monospace;
+    }
+
+    .event-task {
+      color: #79c0ff;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: #6e7681;
+    }
+
+    footer {
+      border-top: 1px solid #30363d;
+      margin-top: 30px;
+      padding-top: 20px;
+      font-size: 0.85em;
+      color: #6e7681;
+      text-align: center;
+    }
+
+    a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔷 Agent Oversight Portal</h1>
+      <div class="status">
+        <div class="status-item">
+          <div class="status-dot" id="connectionStatus"></div>
+          <span id="connectionText">Connecting...</span>
+        </div>
+        <div class="status-item">
+          Events: <span id="eventCount">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="controls">
+      <select id="agentFilter">
+        <option value="">All Agents</option>
+        <option value="openclaw">OpenClaw</option>
+        <option value="hermes">Hermes</option>
+      </select>
+
+      <select id="typeFilter">
+        <option value="">All Types</option>
+        <option value="action">Action</option>
+        <option value="tool_call">Tool Call</option>
+        <option value="task_start">Task Start</option>
+        <option value="task_end">Task End</option>
+        <option value="decision">Decision</option>
+        <option value="error">Error</option>
+        <option value="alert">Alert</option>
+      </select>
+
+      <select id="severityFilter">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="warning">Warning</option>
+        <option value="info">Info</option>
+        <option value="debug">Debug</option>
+      </select>
+
+      <input type="text" id="taskIdFilter" placeholder="Filter by task ID...">
+      <button id="clearButton">Clear</button>
+    </div>
+
+    <div class="event-feed" id="eventFeed">
+      <div class="empty">Waiting for events...</div>
+    </div>
+
+    <footer>
+      <p>Agent Oversight Portal • Real-time event monitoring and alert routing</p>
+      <p><a href="/healthz">Health Check</a> • <a href="/api/events">Events API</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const eventFeed = document.getElementById('eventFeed');
+    const agentFilter = document.getElementById('agentFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const severityFilter = document.getElementById('severityFilter');
+    const taskIdFilter = document.getElementById('taskIdFilter');
+    const clearButton = document.getElementById('clearButton');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const connectionText = document.getElementById('connectionText');
+    const eventCount = document.getElementById('eventCount');
+
+    let allEvents = [];
+    let eventSource = null;
+
+    const severityEmojis = {
+      critical: '🚨',
+      warning: '⚠️',
+      info: 'ℹ️',
+      debug: '🐛'
+    };
+
+    function formatTime(iso) {
+      const date = new Date(iso);
+      return date.toLocaleTimeString('en-US', { hour12: false });
+    }
+
+    function createEventElement(event) {
+      const div = document.createElement('div');
+      div.className = `event ${event.severity}`;
+      
+      const time = formatTime(event.timestamp);
+      const emoji = severityEmojis[event.severity] || '📬';
+
+      let html = `
+        <div class="event-header">
+          <span class="event-agent">${emoji} ${event.agent.toUpperCase()}</span>
+          <span class="event-severity ${event.severity}">${event.severity}</span>
+        </div>
+        <div class="event-title">${escapeHtml(event.title)}</div>
+      `;
+
+      if (event.detail) {
+        html += `<div class="event-detail">${escapeHtml(event.detail)}</div>`;
+      }
+
+      html += `
+        <div class="event-footer">
+          <span class="event-time">${time}</span>
+          ${event.task_id ? `<span class="event-task">Task: ${escapeHtml(event.task_id)}</span>` : ''}
+        </div>
+      `;
+
+      div.innerHTML = html;
+      return div;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function shouldShowEvent(event) {
+      if (agentFilter.value && event.agent !== agentFilter.value) return false;
+      if (typeFilter.value && event.type !== typeFilter.value) return false;
+      if (severityFilter.value && event.severity !== severityFilter.value) return false;
+      if (taskIdFilter.value && event.task_id !== taskIdFilter.value) return false;
+      return true;
+    }
+
+    function renderEvents() {
+      const filtered = allEvents.filter(shouldShowEvent);
+      
+      if (filtered.length === 0) {
+        eventFeed.innerHTML = '<div class="empty">No events match filters</div>';
+      } else {
+        eventFeed.innerHTML = '';
+        filtered.forEach(event => {
+          eventFeed.prepend(createEventElement(event));
+        });
+      }
+
+      eventCount.textContent = allEvents.length;
+    }
+
+    function connectToStream() {
+      connectionStatus.classList.add('disconnected');
+      connectionText.textContent = 'Connecting...';
+
+      eventSource = new EventSource('/api/stream');
+
+      eventSource.onopen = () => {
+        connectionStatus.classList.remove('disconnected');
+        connectionText.textContent = 'Connected';
+        console.log('[Dashboard] Connected to event stream');
+      };
+
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          
+          if (event.type === 'connected') {
+            console.log('[Dashboard] Stream connected');
+            return;
+          }
+
+          allEvents.unshift(event);
+          renderEvents();
+          console.log(`[Dashboard] Received: ${event.agent} | ${event.severity} | ${event.title}`);
+        } catch (err) {
+          console.error('[Dashboard] Parse error:', err);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        connectionStatus.classList.add('disconnected');
+        connectionText.textContent = 'Disconnected';
+        console.error('[Dashboard] Stream error:', err);
+        
+        // Attempt reconnect after 3 seconds
+        setTimeout(connectToStream, 3000);
+      };
+    }
+
+    // Event listeners for filters
+    agentFilter.addEventListener('change', renderEvents);
+    typeFilter.addEventListener('change', renderEvents);
+    severityFilter.addEventListener('change', renderEvents);
+    taskIdFilter.addEventListener('change', renderEvents);
+    clearButton.addEventListener('click', () => {
+      agentFilter.value = '';
+      typeFilter.value = '';
+      severityFilter.value = '';
+      taskIdFilter.value = '';
+      renderEvents();
+    });
+
+    // Connect on load
+    connectToStream();
+  </script>
+</body>
+</html>

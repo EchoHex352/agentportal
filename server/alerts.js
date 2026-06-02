@@ -9,11 +9,16 @@ class Alerts {
   constructor(storage) {
     this.storage = storage;
     this.minSeverity = process.env.ALERT_MIN_SEVERITY || 'warning';
-    this.rateLimit = parseInt(process.env.ALERT_RATE_LIMIT || '10');
-    this.rateLimitWindow = parseInt(process.env.ALERT_RATE_WINDOW_SECS || '60');
+    this.rateLimit = parseInt(process.env.ALERT_RATE_LIMIT || '1');
+    this.rateLimitWindow = parseInt(process.env.ALERT_RATE_WINDOW_SECS || '3600');
     this.telegramGroupId = process.env.TELEGRAM_GROUP_ID;
     this.useOpenClawCli = process.env.USE_OPENCLAW_CLI !== 'false';
     this.botToken = process.env.TELEGRAM_BOT_TOKEN;
+    
+    // Business hours configuration
+    this.businessHoursStart = parseInt(process.env.ALERT_BUSINESS_HOURS_START || '9');
+    this.businessHoursEnd = parseInt(process.env.ALERT_BUSINESS_HOURS_END || '17');
+    this.businessHoursTz = process.env.ALERT_BUSINESS_HOURS_TZ || 'America/New_York';
 
     if (!this.telegramGroupId) {
       console.warn('[Alerts] TELEGRAM_GROUP_ID not set - alerts disabled');
@@ -21,6 +26,26 @@ class Alerts {
 
     const severityLevels = { debug: 0, info: 1, warning: 2, critical: 3 };
     this.minSeverityLevel = severityLevels[this.minSeverity] || 2;
+    
+    console.log(`[Alerts] Configured: ${this.minSeverity}+, ${this.rateLimit} alert(s) per ${this.rateLimitWindow}s, business hours ${this.businessHoursStart}-${this.businessHoursEnd} ${this.businessHoursTz}`);
+  }
+
+  isBusinessHours() {
+    const now = new Date();
+    const estFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: this.businessHoursTz,
+      hour: '2-digit',
+      hour12: false
+    });
+    
+    const estHour = parseInt(estFormatter.format(now));
+    const isOpen = estHour >= this.businessHoursStart && estHour < this.businessHoursEnd;
+    
+    if (!isOpen) {
+      console.log(`[Alerts] Outside business hours (${estHour}:00 EST, window ${this.businessHoursStart}-${this.businessHoursEnd})`);
+    }
+    
+    return isOpen;
   }
 
   shouldAlert(event) {
@@ -158,7 +183,13 @@ class Alerts {
       return;
     }
 
-    // Check rate limit (with de-duplication)
+    // Check business hours (only send during 9am-5pm EST)
+    if (!this.isBusinessHours()) {
+      console.log(`[Alerts] Suppressed (outside business hours): ${event.severity} | ${event.title}`);
+      return;
+    }
+
+    // Check rate limit (with de-duplication) - 1 alert per hour during business hours
     const allowed = await this.checkRateLimit(event);
     if (!allowed) {
       return;

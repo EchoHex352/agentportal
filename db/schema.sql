@@ -11,12 +11,14 @@ CREATE TABLE IF NOT EXISTS events (
   detail TEXT,
   task_id TEXT,
   metadata TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_timestamp (timestamp),
-  INDEX idx_agent (agent),
-  INDEX idx_severity (severity),
-  INDEX idx_task_id (task_id)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create indexes for events table
+CREATE INDEX IF NOT EXISTS idx_timestamp ON events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_agent ON events(agent);
+CREATE INDEX IF NOT EXISTS idx_severity ON events(severity);
+CREATE INDEX IF NOT EXISTS idx_task_id ON events(task_id);
 
 -- Alerts log (tracks forwarded alerts)
 CREATE TABLE IF NOT EXISTS alerts_log (
@@ -34,6 +36,8 @@ CREATE TABLE IF NOT EXISTS alert_rate_limit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   window_start DATETIME,
   alert_count INTEGER DEFAULT 0,
-  last_alert_hash TEXT,
-  INDEX idx_window_start (window_start)
+  last_alert_hash TEXT
 );
+
+-- Create index for alert_rate_limit
+CREATE INDEX IF NOT EXISTS idx_window_start ON alert_rate_limit(window_start);

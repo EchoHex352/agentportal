@@ -15,19 +15,30 @@ class Storage {
 
   ensureDataDir() {
     const dir = path.dirname(this.dbPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        console.log(`[Storage] Created data directory: ${dir}`);
+      }
+    } catch (err) {
+      console.error(`[Storage] Failed to create data directory: ${err.message}`);
+      throw err;
     }
   }
 
   initializeDatabase() {
+    console.log(`[Storage] Initializing database at: ${this.dbPath}`);
     this.db = new sqlite3.Database(this.dbPath, (err) => {
       if (err) {
-        console.error('Error opening database:', err);
+        console.error('[Storage] Error opening database:', err.message);
         process.exit(1);
       }
       console.log(`[Storage] Connected to database: ${this.dbPath}`);
       this.createTables();
+    });
+    
+    this.db.on('error', (err) => {
+      console.error('[Storage] Database error:', err);
     });
   }
 

@@ -14,10 +14,11 @@ const Alerts = require('./alerts');
 const app = express();
 const PORT = process.env.PORT || 8900;
 const BIND_HOST = process.env.BIND_HOST || '127.0.0.1';
-const INGEST_TOKEN = process.env.PORTAL_INGEST_TOKEN;
+const INGEST_TOKEN = process.env.PORTAL_INGEST_TOKEN || 'default-token-change-me';
 
-if (!INGEST_TOKEN) {
-  throw new Error('PORTAL_INGEST_TOKEN not set in .env');
+if (!process.env.PORTAL_INGEST_TOKEN) {
+  console.warn('[WARNING] PORTAL_INGEST_TOKEN not set - using default token');
+  console.warn('[ACTION] Set PORTAL_INGEST_TOKEN in environment variables immediately');
 }
 
 // Initialize storage and alerts
